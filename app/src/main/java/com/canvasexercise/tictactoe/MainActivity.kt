@@ -7,10 +7,14 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.ScrollableState
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
+import androidx.compose.material.Slider
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Refresh
@@ -36,6 +40,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlin.math.roundToInt
 
 class MainActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
@@ -54,51 +59,111 @@ fun Preview() {
 
 @Composable
 fun TicTacToe() {
-  val cellCount = 3
-  val hMargin = 50.dp
-  val checkIconMargin = 10.dp
-  val checkIconWidth = 5.dp
-  BoxWithConstraints {
-    val density = LocalDensity.current
-    val hMarginPx = with(density) { hMargin.toPx() }
-    val checkIconMarginPx = with(density) { checkIconMargin.toPx() }
-    val checkIconWidthPx = with(density) { checkIconWidth.toPx() }
-    val pageWidth = with(density) { maxWidth.toPx() - 2 * hMarginPx }
-    val vMarginPx = with(density) { (maxHeight.toPx() - pageWidth) / 2 }
-    val cellSize = with(pageWidth / cellCount) { Size(this, this) }
-    var resetTrigger by remember { mutableStateOf(0) }
-    var isCircleTurn by remember(resetTrigger) { mutableStateOf(true) }
-    val cells = remember(resetTrigger) { mutableListOf<Cell>() }
-    var winner by remember(resetTrigger) { mutableStateOf<CheckOption?>(null) }
-    var gameIsTied by remember(resetTrigger) { mutableStateOf(false) }
+  var temporaryCellsCount by remember { mutableStateOf(3) }
+  var cellsCount by remember { mutableStateOf(3) }
 
-    var currentPlayingCellIndex by remember(resetTrigger) { mutableStateOf(-1) }
-    val pathPortion = remember(currentPlayingCellIndex) { Animatable(initialValue = 0f) }
-    LaunchedEffect(key1 = currentPlayingCellIndex) {
-      pathPortion.animateTo(1f, animationSpec = tween(500))
+  var iconMargin by remember { mutableStateOf(10.dp) }
+  var iconStrokeWidth by remember { mutableStateOf(6.dp) }
+
+  var resetTrigger by remember { mutableStateOf(0) }
+  var winner by remember(resetTrigger) { mutableStateOf<CheckOption?>(null) }
+  var gameIsTied by remember(resetTrigger) { mutableStateOf(false) }
+  var isCircleTurn by remember(resetTrigger) { mutableStateOf(true) }
+
+  var currentPlayingCellIndex by remember(resetTrigger) { mutableStateOf(-1) }
+
+  Column(
+    Modifier
+      .fillMaxSize()
+      .background(White),
+  ) {
+
+    Row(
+      Modifier
+        .fillMaxWidth()
+        .padding(horizontal = 10.dp),
+      verticalAlignment = Alignment.CenterVertically
+    ) {
+      Text(text = "Cells", Modifier.padding(horizontal = 15.dp))
+      Slider(
+        value = temporaryCellsCount.toFloat(),
+        onValueChange = { temporaryCellsCount = it.roundToInt() },
+        onValueChangeFinished = {
+          if (cellsCount == temporaryCellsCount) return@Slider
+          cellsCount = temporaryCellsCount
+          resetTrigger++
+        },
+        valueRange = 3f..6f
+      )
+    }
+    Row(
+      Modifier
+        .fillMaxWidth()
+        .padding(horizontal = 10.dp),
+      verticalAlignment = Alignment.CenterVertically
+    ) {
+      Text(text = "Icon stroke width", Modifier.padding(horizontal = 15.dp))
+      Slider(
+        value = iconStrokeWidth.value,
+        onValueChange = { iconStrokeWidth = it.dp },
+        valueRange = 2f..10f
+      )
+    }
+    Row(
+      Modifier
+        .fillMaxWidth()
+        .padding(horizontal = 10.dp),
+      verticalAlignment = Alignment.CenterVertically
+    ) {
+      Text(text = "Icon margin", Modifier.padding(horizontal = 15.dp))
+      Slider(
+        value = iconMargin.value,
+        onValueChange = { iconMargin = it.dp },
+        valueRange = 5f..15f
+      )
     }
 
-    LaunchedEffect(key1 = resetTrigger) {
-      for (i in 0 until cellCount) for (j in 0 until cellCount) {
-        cells.add(
-          Cell(
-            i + 1,
-            j + 1,
-            Rect(
-              offset = Offset(
-                x = hMarginPx + j * cellSize.width,
-                y = vMarginPx + i * cellSize.height
-              ), cellSize
+    BoxWithConstraints(
+      Modifier
+        .padding(vertical = 20.dp)
+        .height(300.dp)
+    ) {
+      val density = LocalDensity.current
+
+      val hMarginPx = with(density) { 50.dp.toPx() }
+      val iconMarginPx = with(density) { iconMargin.toPx() }
+      val iconStrokeWidthPx = with(density) { iconStrokeWidth.toPx() }
+
+      val pageWidth = with(density) { maxWidth.toPx() - 2 * hMarginPx }
+      val vMarginPx = with(density) { (maxHeight.toPx() - pageWidth) / 2 }
+      val cellSize = with(pageWidth / cellsCount) { Size(this, this) }
+      val cells = remember(resetTrigger) { mutableListOf<Cell>() }
+
+      val pathPortion = remember(currentPlayingCellIndex) { Animatable(initialValue = 0f) }
+      LaunchedEffect(key1 = currentPlayingCellIndex) {
+        pathPortion.animateTo(1f, animationSpec = tween(500))
+      }
+
+      LaunchedEffect(key1 = resetTrigger) {
+        for (i in 0 until cellsCount) for (j in 0 until cellsCount) {
+          cells.add(
+            Cell(
+              i + 1,
+              j + 1,
+              Rect(
+                offset = Offset(
+                  x = hMarginPx + j * cellSize.width,
+                  y = vMarginPx + i * cellSize.height
+                ), cellSize
+              )
             )
           )
-        )
+        }
       }
-    }
-    Column(Modifier.fillMaxWidth()) {
+
       Canvas(
         modifier = Modifier
-          .fillMaxWidth()
-          .weight(1f)
+          .fillMaxSize()
           .background(White)
           .pointerInput(resetTrigger) {
             detectTapGestures {
@@ -117,7 +182,7 @@ fun TicTacToe() {
                     // change the turn
                     isCircleTurn = !isCircleTurn
                     // check if we have a winner
-                    winner = checkIfGameIsFinished(cells, cellCount)
+                    winner = checkIfGameIsFinished(cells, cellsCount)
                     // Check if the game has been tied or not
                     if (winner == null && isGameTied(cells)) gameIsTied = true
                     return@loop
@@ -127,12 +192,12 @@ fun TicTacToe() {
             }
           }
       ) {
-        drawCells(hMarginPx, vMarginPx, cellSize, cellCount)
+        drawCells(hMarginPx, vMarginPx, cellSize, cellsCount)
 
         cells.forEachIndexed { index, cell ->
           when (cell.checkOption) {
             CheckOption.Circle -> {
-              val path = Path().apply { addOval(cell.bound.deflate(checkIconMarginPx)) }
+              val path = Path().apply { addOval(cell.bound.deflate(iconMarginPx)) }
               // if this cell is the currently playing cell, draw it with animation
               if (currentPlayingCellIndex == index) {
                 val outPath = Path()
@@ -140,30 +205,30 @@ fun TicTacToe() {
                   setPath(path, false)
                   getSegment(0f, pathPortion.value * length, outPath)
                 }
-                drawPath(outPath, color = Red, style = Stroke(width = checkIconWidthPx))
+                drawPath(outPath, color = Red, style = Stroke(width = iconStrokeWidthPx))
               }
               // else draw it without animation
-              else drawPath(path, color = Red, style = Stroke(width = checkIconWidthPx))
+              else drawPath(path, color = Red, style = Stroke(width = iconStrokeWidthPx))
             }
             CheckOption.Cross -> {
               val firstLinePath = Path().apply {
                 moveTo(
-                  cell.bound.topLeft.x + checkIconMarginPx,
-                  cell.bound.topLeft.y + checkIconMarginPx
+                  cell.bound.topLeft.x + iconMarginPx,
+                  cell.bound.topLeft.y + iconMarginPx
                 )
                 lineTo(
-                  cell.bound.bottomRight.x - checkIconMarginPx,
-                  cell.bound.bottomRight.y - checkIconMarginPx,
+                  cell.bound.bottomRight.x - iconMarginPx,
+                  cell.bound.bottomRight.y - iconMarginPx,
                 )
               }
               val secondLinePath = Path().apply {
                 moveTo(
-                  cell.bound.bottomLeft.x + checkIconMarginPx,
-                  cell.bound.bottomLeft.y - checkIconMarginPx,
+                  cell.bound.bottomLeft.x + iconMarginPx,
+                  cell.bound.bottomLeft.y - iconMarginPx,
                 )
                 lineTo(
-                  cell.bound.topRight.x - checkIconMarginPx,
-                  cell.bound.topRight.y + checkIconMarginPx,
+                  cell.bound.topRight.x - iconMarginPx,
+                  cell.bound.topRight.y + iconMarginPx,
                 )
               }
               // if this cell is the currently playing cell, draw it with animation
@@ -173,18 +238,18 @@ fun TicTacToe() {
                   setPath(firstLinePath, false)
                   getSegment(0f, pathPortion.value * length, outPath1)
                 }
-                drawPath(outPath1, color = Blue, style = Stroke(width = checkIconWidthPx))
+                drawPath(outPath1, color = Blue, style = Stroke(width = iconStrokeWidthPx))
                 val outPath2 = Path()
                 PathMeasure().apply {
                   setPath(secondLinePath, false)
                   getSegment(0f, pathPortion.value * length, outPath2)
                 }
-                drawPath(outPath2, color = Blue, style = Stroke(width = checkIconWidthPx))
+                drawPath(outPath2, color = Blue, style = Stroke(width = iconStrokeWidthPx))
               }
               // else draw it without animation
               else {
-                drawPath(firstLinePath, color = Blue, style = Stroke(width = checkIconWidthPx))
-                drawPath(secondLinePath, color = Blue, style = Stroke(width = checkIconWidthPx))
+                drawPath(firstLinePath, color = Blue, style = Stroke(width = iconStrokeWidthPx))
+                drawPath(secondLinePath, color = Blue, style = Stroke(width = iconStrokeWidthPx))
               }
             }
             null -> {
@@ -192,34 +257,36 @@ fun TicTacToe() {
           }
         }
       }
-      if (winner != null || gameIsTied) {
-        Row(
-          Modifier
-            .fillMaxWidth()
-            .padding(vertical = 30.dp),
-          horizontalArrangement = Arrangement.Center,
-          verticalAlignment = Alignment.CenterVertically
+    }
+
+    if (winner != null || gameIsTied) {
+      val stateColor = when {
+        gameIsTied -> Black
+        winner is CheckOption.Circle -> Red
+        else -> Blue
+      }
+      Row(
+        Modifier
+          .fillMaxWidth()
+          .padding(vertical = 10.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
+      ) {
+        IconButton(
+          onClick = { resetTrigger++ },
+          Modifier.padding(horizontal = 10.dp)
         ) {
-          IconButton(
-            onClick = { resetTrigger++ },
-            Modifier.padding(horizontal = 10.dp)
-          ) {
-            Icon(Icons.Rounded.Refresh, contentDescription = null)
-          }
-          Text(
-            text = if (gameIsTied) "Game Tied" else "${winner.toString()} is winner",
-            textAlign = TextAlign.Center,
-            style = TextStyle(
-              fontSize = 20.sp,
-              color = when {
-                gameIsTied -> Black
-                winner is CheckOption.Circle -> Red
-                else -> Blue
-              },
-              fontWeight = FontWeight.Bold
-            )
-          )
+          Icon(Icons.Rounded.Refresh, contentDescription = null, tint = stateColor)
         }
+        Text(
+          text = if (gameIsTied) "Game Tied" else "${winner.toString()} is winner",
+          textAlign = TextAlign.Center,
+          style = TextStyle(
+            fontSize = 20.sp,
+            color = stateColor,
+            fontWeight = FontWeight.Bold
+          )
+        )
       }
     }
   }
