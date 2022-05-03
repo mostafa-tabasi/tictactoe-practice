@@ -1,13 +1,14 @@
-package com.canvasexercise.android
+package com.canvasexercise.tictactoe
 
 sealed class CheckOption {
-    object Circle : CheckOption() {
-        override fun toString(): String = "Circle"
-    }
 
-    object Cross : CheckOption() {
-        override fun toString(): String = "Cross"
-    }
+  object Circle : CheckOption() {
+    override fun toString(): String = "Circle"
+  }
 
-    abstract override fun toString(): String
+  object Cross : CheckOption() {
+    override fun toString(): String = "Cross"
+  }
+
+  abstract override fun toString(): String
 }
