@@ -57,10 +57,12 @@ fun TicTacToe() {
   val cellCount = 3
   val hMargin = 50.dp
   val checkIconMargin = 10.dp
+  val checkIconWidth = 5.dp
   BoxWithConstraints {
     val density = LocalDensity.current
     val hMarginPx = with(density) { hMargin.toPx() }
     val checkIconMarginPx = with(density) { checkIconMargin.toPx() }
+    val checkIconWidthPx = with(density) { checkIconWidth.toPx() }
     val pageWidth = with(density) { maxWidth.toPx() - 2 * hMarginPx }
     val vMarginPx = with(density) { (maxHeight.toPx() - pageWidth) / 2 }
     val cellSize = with(pageWidth / cellCount) { Size(this, this) }
@@ -68,6 +70,7 @@ fun TicTacToe() {
     var isCircleTurn by remember(resetTrigger) { mutableStateOf(true) }
     val cells = remember(resetTrigger) { mutableListOf<Cell>() }
     var winner by remember(resetTrigger) { mutableStateOf<CheckOption?>(null) }
+    var gameIsTied by remember(resetTrigger) { mutableStateOf(false) }
 
     var currentPlayingCellIndex by remember(resetTrigger) { mutableStateOf(-1) }
     val pathPortion = remember(currentPlayingCellIndex) { Animatable(initialValue = 0f) }
@@ -115,6 +118,8 @@ fun TicTacToe() {
                     isCircleTurn = !isCircleTurn
                     // check if we have a winner
                     winner = checkIfGameIsFinished(cells, cellCount)
+                    // Check if the game has been tied or not
+                    if (winner == null && isGameTied(cells)) gameIsTied = true
                     return@loop
                   }
                 }
@@ -135,10 +140,10 @@ fun TicTacToe() {
                   setPath(path, false)
                   getSegment(0f, pathPortion.value * length, outPath)
                 }
-                drawPath(outPath, color = Red, style = Stroke(width = 3.dp.toPx()))
+                drawPath(outPath, color = Red, style = Stroke(width = checkIconWidthPx))
               }
               // else draw it without animation
-              else drawPath(path, color = Red, style = Stroke(width = 3.dp.toPx()))
+              else drawPath(path, color = Red, style = Stroke(width = checkIconWidthPx))
             }
             CheckOption.Cross -> {
               val firstLinePath = Path().apply {
@@ -168,18 +173,18 @@ fun TicTacToe() {
                   setPath(firstLinePath, false)
                   getSegment(0f, pathPortion.value * length, outPath1)
                 }
-                drawPath(outPath1, color = Blue, style = Stroke(width = 3.dp.toPx()))
+                drawPath(outPath1, color = Blue, style = Stroke(width = checkIconWidthPx))
                 val outPath2 = Path()
                 PathMeasure().apply {
                   setPath(secondLinePath, false)
                   getSegment(0f, pathPortion.value * length, outPath2)
                 }
-                drawPath(outPath2, color = Blue, style = Stroke(width = 3.dp.toPx()))
+                drawPath(outPath2, color = Blue, style = Stroke(width = checkIconWidthPx))
               }
               // else draw it without animation
               else {
-                drawPath(firstLinePath, color = Blue, style = Stroke(width = 3.dp.toPx()))
-                drawPath(secondLinePath, color = Blue, style = Stroke(width = 3.dp.toPx()))
+                drawPath(firstLinePath, color = Blue, style = Stroke(width = checkIconWidthPx))
+                drawPath(secondLinePath, color = Blue, style = Stroke(width = checkIconWidthPx))
               }
             }
             null -> {
@@ -187,7 +192,7 @@ fun TicTacToe() {
           }
         }
       }
-      if (winner != null) {
+      if (winner != null || gameIsTied) {
         Row(
           Modifier
             .fillMaxWidth()
@@ -202,11 +207,15 @@ fun TicTacToe() {
             Icon(Icons.Rounded.Refresh, contentDescription = null)
           }
           Text(
-            text = "${winner.toString()} is winner",
+            text = if (gameIsTied) "Game Tied" else "${winner.toString()} is winner",
             textAlign = TextAlign.Center,
             style = TextStyle(
               fontSize = 20.sp,
-              color = if (winner is CheckOption.Circle) Red else Blue,
+              color = when {
+                gameIsTied -> Black
+                winner is CheckOption.Circle -> Red
+                else -> Blue
+              },
               fontWeight = FontWeight.Bold
             )
           )
@@ -214,6 +223,16 @@ fun TicTacToe() {
       }
     }
   }
+}
+
+/**
+ * check if the game is tied or not
+ *
+ * if all items in the cell list have any check option but no one has been won, the game is tied
+ */
+fun isGameTied(cells: List<Cell>): Boolean {
+  cells.forEach { if (it.checkOption == null) return false }
+  return true
 }
 
 fun checkIfGameIsFinished(cells: List<Cell>, cellCount: Int): CheckOption? {

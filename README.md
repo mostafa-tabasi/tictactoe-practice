@@ -1,2 +1,2 @@
 # tictactoe-practice
-A simple nxn TicTacToe game with Jetpack Compose
+A simple NxN Tic-Tac-Toe game with Jetpack Compose
