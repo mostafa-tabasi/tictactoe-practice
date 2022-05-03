@@ -8,12 +8,14 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
+import androidx.compose.material.Icon
+import androidx.compose.material.IconButton
 import androidx.compose.material.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
@@ -29,6 +31,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -53,7 +56,7 @@ fun Preview() {
 fun TicTacToe() {
   val cellCount = 3
   val hMargin = 50.dp
-  val checkIconMargin = 20.dp
+  val checkIconMargin = 10.dp
   BoxWithConstraints {
     val density = LocalDensity.current
     val hMarginPx = with(density) { hMargin.toPx() }
@@ -61,17 +64,18 @@ fun TicTacToe() {
     val pageWidth = with(density) { maxWidth.toPx() - 2 * hMarginPx }
     val vMarginPx = with(density) { (maxHeight.toPx() - pageWidth) / 2 }
     val cellSize = with(pageWidth / cellCount) { Size(this, this) }
-    var isCircleTurn by remember { mutableStateOf(true) }
-    val cells = remember { mutableListOf<Cell>() }
-    var winner by remember { mutableStateOf<CheckOption?>(null) }
+    var resetTrigger by remember { mutableStateOf(0) }
+    var isCircleTurn by remember(resetTrigger) { mutableStateOf(true) }
+    val cells = remember(resetTrigger) { mutableListOf<Cell>() }
+    var winner by remember(resetTrigger) { mutableStateOf<CheckOption?>(null) }
 
-    var currentPlayingCellIndex by remember { mutableStateOf(-1) }
+    var currentPlayingCellIndex by remember(resetTrigger) { mutableStateOf(-1) }
     val pathPortion = remember(currentPlayingCellIndex) { Animatable(initialValue = 0f) }
     LaunchedEffect(key1 = currentPlayingCellIndex) {
       pathPortion.animateTo(1f, animationSpec = tween(500))
     }
 
-    LaunchedEffect(key1 = true) {
+    LaunchedEffect(key1 = resetTrigger) {
       for (i in 0 until cellCount) for (j in 0 until cellCount) {
         cells.add(
           Cell(
@@ -93,7 +97,7 @@ fun TicTacToe() {
           .fillMaxWidth()
           .weight(1f)
           .background(White)
-          .pointerInput(true) {
+          .pointerInput(resetTrigger) {
             detectTapGestures {
               // if game has a winner, it isn't playable anymore
               if (winner != null) return@detectTapGestures
@@ -183,16 +187,31 @@ fun TicTacToe() {
           }
         }
       }
-      if (winner != null) Text(
-        text = "${winner.toString()} is winner",
-        Modifier
-          .fillMaxWidth()
-          .padding(5.dp),
-        textAlign = TextAlign.Center,
-        style = TextStyle(
-          fontSize = 20.sp, color = if (winner is CheckOption.Circle) Red else Blue
-        )
-      )
+      if (winner != null) {
+        Row(
+          Modifier
+            .fillMaxWidth()
+            .padding(vertical = 30.dp),
+          horizontalArrangement = Arrangement.Center,
+          verticalAlignment = Alignment.CenterVertically
+        ) {
+          IconButton(
+            onClick = { resetTrigger++ },
+            Modifier.padding(horizontal = 10.dp)
+          ) {
+            Icon(Icons.Rounded.Refresh, contentDescription = null)
+          }
+          Text(
+            text = "${winner.toString()} is winner",
+            textAlign = TextAlign.Center,
+            style = TextStyle(
+              fontSize = 20.sp,
+              color = if (winner is CheckOption.Circle) Red else Blue,
+              fontWeight = FontWeight.Bold
+            )
+          )
+        }
+      }
     }
   }
 }
